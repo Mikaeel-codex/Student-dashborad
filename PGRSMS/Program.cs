@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Http;
 using Pgrsms.Data;
 using Pgrsms.Models;
+using System.IO;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -41,10 +42,9 @@ builder.Services.ConfigureApplicationCookie(options =>
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
 
+
 // ---------- Persist DataProtection keys (prevents cookie breakage across runs) ----------
-var keysPath = Path.Combine(
-    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-    "Pgrsms", "keys");
+var keysPath = Path.Combine(AppContext.BaseDirectory, "keys");
 Directory.CreateDirectory(keysPath);
 
 builder.Services.AddDataProtection()
