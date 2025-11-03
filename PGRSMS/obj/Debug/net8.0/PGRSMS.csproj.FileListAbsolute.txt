@@ -511,3 +511,4 @@ D:\PGRSMS\PGRSMS\obj\Debug\net8.0\refint\Pgrsms.dll
 D:\PGRSMS\PGRSMS\obj\Debug\net8.0\Pgrsms.pdb
 D:\PGRSMS\PGRSMS\obj\Debug\net8.0\Pgrsms.genruntimeconfig.cache
 D:\PGRSMS\PGRSMS\obj\Debug\net8.0\ref\Pgrsms.dll
+D:\PGRSMS\PGRSMS\obj\Debug\net8.0\Pgrsms.sourcelink.json
