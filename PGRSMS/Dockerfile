@@ -15,6 +15,7 @@ RUN dotnet publish Pgrsms.csproj -c Release -o /app
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
 COPY --from=build /app ./
+RUN mkdir -p /app/Pgrsms/keys
 
 # Bind to Render's injected port
 ENV ASPNETCORE_URLS=http://0.0.0.0:${PORT}
