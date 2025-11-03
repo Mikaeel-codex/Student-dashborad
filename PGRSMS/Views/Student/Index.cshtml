@@ -1,0 +1,765 @@
+﻿@using System.Linq
+@{
+    ViewData["Title"] = "Student Dashboard";
+    var active = (string)(ViewBag.ActiveTab ?? "ai");
+    string IsActive(string t) => active == t ? "active" : "";
+    string IsPane(string t) => active == t ? "tab-pane show active" : "tab-pane";
+
+    var uploadsRoot = System.IO.Path.Combine(System.IO.Directory.GetCurrentDirectory(), "wwwroot", "uploads");
+    var uploaded = System.IO.Directory.Exists(uploadsRoot) ? System.IO.Directory.GetFiles(uploadsRoot) : System.Array.Empty<string>();
+    string UrlFromPath(string p) => "/uploads/" + System.IO.Path.GetFileName(p);
+}
+@section Styles {
+    <style>
+        /* --- Look & feel --- */
+        :root {
+            --bg: #0c0f14;
+            --card: #121721;
+            --muted: #9aa3b2;
+            --text: #e8ecf3;
+            --brand: #7c5cff;
+            --brand2: #00e0a1;
+            --warn: #ffb86c;
+        }
+
+        body {
+            background: linear-gradient(180deg,#0c0f14 0%, #0f141d 100%);
+            color: var(--text);
+        }
+
+        .dashboard {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .sidebar {
+            width: 280px;
+            position: sticky;
+            top: 80px;
+            height: calc(100vh - 100px);
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,.06);
+            border-radius: 16px;
+            padding: 12px;
+            overflow: auto;
+            backdrop-filter: blur(6px);
+        }
+
+            .sidebar .nav-link {
+                display: flex;
+                align-items: center;
+                gap: .6rem;
+                color: var(--muted);
+                padding: .65rem .8rem;
+                border-radius: 12px;
+                transition: all .2s ease;
+            }
+
+                .sidebar .nav-link:hover {
+                    background: rgba(255,255,255,.06);
+                    color: var(--text);
+                    transform: translateX(2px);
+                }
+
+                .sidebar .nav-link.active {
+                    color: white;
+                    background: linear-gradient(90deg, rgba(124,92,255,.25), rgba(0,224,161,.2));
+                    border: 1px solid rgba(124,92,255,.35);
+                }
+
+        .main {
+            flex: 1;
+        }
+
+        .cardx {
+            background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+            border: 1px solid rgba(255,255,255,.08);
+            border-radius: 16px;
+            padding: 1.2rem 1.1rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,.35);
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: .6rem;
+        }
+
+        h2.page {
+            font-weight: 700;
+            letter-spacing: .3px;
+        }
+
+        .smallmuted {
+            color: var(--muted);
+            font-size: .9rem;
+        }
+
+        .btnx {
+            border-radius: 12px;
+            padding: .55rem .9rem;
+            border: 1px solid rgba(255,255,255,.12);
+            color: #fff;
+        }
+
+            .btnx.brand {
+                background: linear-gradient(90deg, var(--brand), var(--brand2));
+                border: none;
+            }
+
+            .btnx.ghost {
+                background: transparent;
+            }
+
+        .inputx, textarea, select {
+            background: #0f1520;
+            color: #e8ecf3;
+            border: 1px solid rgba(255,255,255,.08);
+            border-radius: 12px;
+            padding: .65rem .8rem;
+        }
+
+        .progress {
+            height: 10px;
+            border-radius: 999px;
+            background: #1a2330;
+        }
+
+        .progress-bar {
+            background: linear-gradient(90deg,var(--brand),var(--brand2));
+        }
+
+        .badge-soft {
+            background: rgba(124,92,255,.16);
+            color: #e7dfff;
+            padding: .25rem .5rem;
+            border-radius: 999px;
+            font-size: .75rem;
+        }
+
+        .divide {
+            border-top: 1px dashed rgba(255,255,255,.08);
+            margin: 1rem 0;
+        }
+        /* --- Animations --- */
+        @@keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(8px) scale(.98);
+            }
+
+            to {
+                opacity: 1;
+                transform: none;
+            }
+        }
+
+        .animate-in {
+            animation: fadeUp .35s ease both;
+        }
+
+        .tab-pane {
+            display: none;
+            opacity: 0;
+            transition: opacity .2s ease;
+        }
+
+            .tab-pane.show.active {
+                display: block;
+                opacity: 1;
+            }
+        /* grid helpers */
+        .grid {
+            display: grid;
+            gap: 1rem;
+        }
+
+            .grid.two {
+                grid-template-columns: repeat(2,minmax(0,1fr));
+            }
+
+            .grid.three {
+                grid-template-columns: repeat(3,minmax(0,1fr));
+            }
+
+        @@media (max-width: 1100px) {
+            .sidebar {
+                display: none;
+            }
+
+            .grid.two, .grid.three {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+}
+
+<div class="dashboard container-lg mt-4">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <nav class="nav flex-column">
+            <a class="nav-link @IsActive("ai")" data-tab="ai" href="?tab=ai">🤖 AI Companion</a>
+            <a class="nav-link @IsActive("msg")" data-tab="msg" href="?tab=msg">💬 Messaging</a>
+            <a class="nav-link @IsActive("service")" data-tab="service" href="?tab=service">🛠️ Service Request</a>
+            <a class="nav-link @IsActive("analytics")" data-tab="analytics" href="?tab=analytics">📊 Analytics</a>
+            <a class="nav-link @IsActive("resources")" data-tab="resources" href="?tab=resources">📚 Resource Library & CV</a>
+            <a class="nav-link @IsActive("tasks")" data-tab="tasks" href="?tab=tasks">🗒️ Upcoming Tasks</a>
+            <a class="nav-link @IsActive("classes")" data-tab="classes" href="?tab=classes">🎓 Enrolled Classes</a>
+            <a class="nav-link @IsActive("ann")" data-tab="ann" href="?tab=ann">📣 Announcements</a>
+            <a class="nav-link @IsActive("directory")" data-tab="directory" href="?tab=directory">📇 Contact Directory</a>
+            <a class="nav-link @IsActive("marks")" data-tab="marks" href="?tab=marks">🏁 Marks Outlook</a>
+            <a class="nav-link @IsActive("calendar")" data-tab="calendar" href="?tab=calendar">📅 Calendar</a>
+            <a class="nav-link @IsActive("sponsor")" data-tab="sponsor" href="?tab=sponsor">⭐ Sponsored Content</a>
+            <a class="nav-link @IsActive("jobs")" data-tab="jobs" href="?tab=jobs">💼 Jobs Available</a>
+            <a class="nav-link @IsActive("billing")" data-tab="billing" href="?tab=billing">🧾 Quotation & Billing</a>
+            <a class="nav-link @IsActive("doc-upload")" data-tab="doc-upload" href="?tab=doc-upload">📤 Document Upload</a>
+            <a class="nav-link @IsActive("feedback")" data-tab="feedback" href="?tab=feedback">📝 Feedback</a>
+        </nav>
+    </aside>
+
+    <!-- Main content -->
+    <section class="main">
+        <div class="header">
+            <h2 class="page">Student Dashboard</h2>
+            <div class="smallmuted">Smooth, animated, and ready for you ✨</div>
+        </div>
+
+        <div class="tab-content">
+
+            <!-- AI Companion -->
+            <div id="tab-ai" class="@IsPane("ai") animate-in">
+                <div class="cardx">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="badge-soft">AI Assistant</span>
+                        <button class="btnx ghost" id="aiClear">Clear</button>
+                    </div>
+                    <div id="aiLog" class="cardx" style="background:#0f1520; max-height:320px; overflow:auto;"></div>
+                    <div class="mt-2 d-flex gap-2">
+                        <input id="aiInput" class="inputx flex-grow-1" placeholder="Ask anything about your studies…" />
+                        <button class="btnx brand" id="aiSend">Send</button>
+                    </div>
+                    <small class="smallmuted">This demo uses on-page logic; swap to your API later.</small>
+                </div>
+            </div>
+
+            <!-- Messaging -->
+            <div id="tab-msg" class="@IsPane("msg") animate-in">
+                <div class="grid two">
+                    <div class="cardx">
+                        <div class="mb-2"><span class="badge-soft">Chats</span></div>
+                        <div id="chatLog" style="max-height:360px; overflow:auto;"></div>
+                        <div class="mt-2 d-flex gap-2">
+                            <input id="chatInput" class="inputx flex-grow-1" placeholder="Type a message…" />
+                            <button id="chatSend" class="btnx brand">Send</button>
+                        </div>
+                        <small class="smallmuted">Messages are saved to your browser (per user).</small>
+                    </div>
+                    <div class="cardx">
+                        <div class="mb-2"><span class="badge-soft">Quick Templates</span></div>
+                        <div class="d-grid gap-2">
+                            <button class="btnx ghost tpl" data-tpl="Hello! Could you help me with my assignment?">Assignment help</button>
+                            <button class="btnx ghost tpl" data-tpl="Hi, I will be late to the class today.">Late notice</button>
+                            <button class="btnx ghost tpl" data-tpl="Could we schedule a meeting this week?">Schedule meeting</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Service Request -->
+            <div id="tab-service" class="@IsPane("service") animate-in">
+                <div class="cardx grid two">
+                    <div>
+                        <h5>Raise a service request</h5>
+                        <form id="svcForm" class="grid">
+                            <input class="inputx" placeholder="Subject" id="svcSub" />
+                            <select class="inputx" id="svcType">
+                                <option>IT Support</option>
+                                <option>Facilities</option>
+                                <option>Academic</option>
+                                <option>Finance</option>
+                            </select>
+                            <textarea class="inputx" rows="6" placeholder="Describe the issue…" id="svcDesc"></textarea>
+                            <button type="submit" class="btnx brand">Submit</button>
+                        </form>
+                    </div>
+                    <div>
+                        <h6>My requests</h6>
+                        <div id="svcList"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Analytics -->
+            <div id="tab-analytics" class="@IsPane("analytics") animate-in">
+                <div class="grid two">
+                    <div class="cardx">
+                        <h6>Study time (hrs) this week</h6>
+                        <canvas id="chartStudy" height="120"></canvas>
+                    </div>
+                    <div class="cardx">
+                        <h6>Course completion</h6>
+                        <div class="mb-2">
+                            Research Methods
+                            <div class="progress"><div class="progress-bar" style="width:75%"></div></div>
+                        </div>
+                        <div class="mb-2">
+                            Data Analysis
+                            <div class="progress"><div class="progress-bar" style="width:52%"></div></div>
+                        </div>
+                        <div class="mb-2">
+                            Thesis Writing
+                            <div class="progress"><div class="progress-bar" style="width:33%"></div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Resource Library + CV Generator -->
+            <div id="tab-resources" class="@IsPane("resources") animate-in">
+                <div class="grid two">
+                    <div class="cardx">
+                        <h6>Resource Library</h6>
+                        <ul class="smallmuted">
+                            <li><a href="https://owl.purdue.edu/owl/purdue_owl.html" target="_blank">Academic writing guide</a></li>
+                            <li><a href="https://scholar.google.com/" target="_blank">Google Scholar</a></li>
+                            <li><a href="https://www.overleaf.com/learn" target="_blank">LaTeX/Overleaf tutorials</a></li>
+                        </ul>
+                    </div>
+                    <div class="cardx">
+                        <h6>CV Generator</h6>
+                        <div class="grid">
+                            <input id="cvName" class="inputx" placeholder="Full name" />
+                            <input id="cvEmail" class="inputx" placeholder="Email" />
+                            <textarea id="cvSummary" class="inputx" rows="4" placeholder="Professional summary"></textarea>
+                            <textarea id="cvSkills" class="inputx" rows="3" placeholder="Key skills (comma separated)"></textarea>
+                            <textarea id="cvExperience" class="inputx" rows="5" placeholder="Experience (one per line)"></textarea>
+                            <button class="btnx brand" id="cvGenerate">Generate CV (HTML to PDF via print)</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Upcoming Tasks -->
+            <div id="tab-tasks" class="@IsPane("tasks") animate-in">
+                <div class="cardx">
+                    <h6>Upcoming Tasks</h6>
+                    <form id="taskForm" class="d-flex gap-2 my-2">
+                        <input id="taskTitle" class="inputx flex-grow-1" placeholder="Task title" />
+                        <input id="taskDue" type="date" class="inputx" />
+                        <button class="btnx brand" type="submit">Add</button>
+                    </form>
+                    <div id="taskList"></div>
+                </div>
+            </div>
+
+            <!-- Enrolled Classes -->
+            <div id="tab-classes" class="@IsPane("classes") animate-in">
+                <div class="cardx">
+                    <h6>My Classes</h6>
+                    <div class="grid three">
+                        <div class="cardx"><b>Research Methods</b><div class="smallmuted">Tue 10:00 • Lab 3A</div></div>
+                        <div class="cardx"><b>Advanced Statistics</b><div class="smallmuted">Wed 12:00 • Hall B</div></div>
+                        <div class="cardx"><b>Thesis Seminar</b><div class="smallmuted">Fri 14:00 • Room 212</div></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Announcements -->
+            <div id="tab-ann" class="@IsPane("ann") animate-in">
+                <div class="cardx">
+                    <h6>Announcements</h6>
+                    <ul>
+                        <li>📢 Library opens 24/7 during exams.</li>
+                        <li>📢 Submit ethics clearance by <span class="badge-soft">Sept 18</span>.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Contact Directory -->
+            <div id="tab-directory" class="@IsPane("directory") animate-in">
+                <div class="grid two">
+                    <div class="cardx">
+                        <h6>Directory</h6>
+                        <ul id="dirList" class="list-unstyled">
+                            <li class="d-flex justify-content-between align-items-center mb-2">
+                                <div><b>Dr. Lee</b><div class="smallmuted">Supervisor</div></div>
+                                <button class="btnx ghost dirmsg" data-name="Dr. Lee">Message</button>
+                            </li>
+                            <li class="d-flex justify-content-between align-items-center mb-2">
+                                <div><b>Helpdesk</b><div class="smallmuted">IT Support</div></div>
+                                <button class="btnx ghost dirmsg" data-name="Helpdesk">Message</button>
+                            </li>
+                            <li class="d-flex justify-content-between align-items-center mb-2">
+                                <div><b>Admin Office</b><div class="smallmuted">Registry</div></div>
+                                <button class="btnx ghost dirmsg" data-name="Admin Office">Message</button>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="cardx">
+                        <h6>Compose</h6>
+                        <textarea id="dirCompose" class="inputx" rows="8" placeholder="Auto-populated message here…"></textarea>
+                        <div class="mt-2 d-flex gap-2">
+                            <button class="btnx brand" id="dirSend">Send</button>
+                            <button class="btnx ghost" id="dirClear">Clear</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Marks Outlook -->
+            <div id="tab-marks" class="@IsPane("marks") animate-in">
+                <div class="cardx grid two">
+                    <div>
+                        <h6>Add assessment</h6>
+                        <form id="markForm" class="grid">
+                            <input id="mkTitle" class="inputx" placeholder="Assessment title" />
+                            <input id="mkEarned" type="number" class="inputx" placeholder="Marks earned" />
+                            <input id="mkTotal" type="number" class="inputx" placeholder="Total marks" />
+                            <button class="btnx brand" type="submit">Add</button>
+                        </form>
+                    </div>
+                    <div>
+                        <h6>Progress</h6>
+                        <div id="marksList"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Calendar -->
+            <div id="tab-calendar" class="@IsPane("calendar") animate-in">
+                <div class="cardx">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 id="calTitle">Calendar</h6>
+                        <div class="d-flex gap-2">
+                            <button class="btnx ghost" id="calPrev">‹</button>
+                            <button class="btnx ghost" id="calNext">›</button>
+                        </div>
+                    </div>
+                    <div id="calendarGrid" class="grid three" style="grid-template-columns: repeat(7,1fr);"></div>
+                </div>
+            </div>
+
+            <!-- Sponsored -->
+            <div id="tab-sponsor" class="@IsPane("sponsor") animate-in">
+                <div class="cardx">
+                    <h6>Sponsored</h6>
+                    <div class="cardx" style="background:linear-gradient(90deg,#121721,#20304a)">
+                        <b>Get 50% off cloud credits</b>
+                        <div class="smallmuted">Students only · build your next AI project</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Jobs -->
+            <div id="tab-jobs" class="@IsPane("jobs") animate-in">
+                <div class="grid two">
+                    <div class="cardx"><b>Research Assistant</b><div class="smallmuted">Part time · Remote</div><button class="btnx brand mt-2">Apply</button></div>
+                    <div class="cardx"><b>Data Analyst Intern</b><div class="smallmuted">Full time · Onsite</div><button class="btnx brand mt-2">Apply</button></div>
+                </div>
+            </div>
+
+            <!-- Quotation & Billing -->
+            <div id="tab-billing" class="@IsPane("billing") animate-in">
+                <div class="cardx">
+                    <h6>Quotation / Billing</h6>
+                    <form id="billForm" class="d-flex gap-2 my-2">
+                        <input id="bDesc" class="inputx flex-grow-1" placeholder="Description" />
+                        <input id="bQty" type="number" class="inputx" placeholder="Qty" />
+                        <input id="bPrice" type="number" step="0.01" class="inputx" placeholder="Unit price" />
+                        <button class="btnx brand" type="submit">Add</button>
+                    </form>
+                    <div id="billList"></div>
+                    <div class="divide"></div>
+                    <div id="billTotals" class="d-flex justify-content-end gap-4"></div>
+                </div>
+            </div>
+
+            <!-- Document Upload -->
+            <div id="tab-doc-upload" class="@IsPane("doc-upload") animate-in">
+                <div class="cardx">
+                    <h6>Upload Documents</h6>
+                    @if (TempData["UploadStatus"] != null)
+                    {
+                        <div class="smallmuted">@TempData["UploadStatus"]</div>
+                    }
+                    <form asp-action="UploadDoc" asp-controller="Student" method="post" enctype="multipart/form-data" class="d-flex gap-2 my-2">
+                        <input name="file" type="file" class="inputx" />
+                        <button type="submit" class="btnx brand">Upload</button>
+                    </form>
+                    <div class="grid three">
+                        @foreach (var f in uploaded.Reverse())
+                        {
+                            <a class="cardx" style="text-decoration:none" href="@UrlFromPath(f)" target="_blank">
+                                <b>@System.IO.Path.GetFileName(f)</b>
+                                <div class="smallmuted">@((System.Math.Round(new System.IO.FileInfo(f).Length / 1024.0, 1))) KB</div>
+                            </a>
+                        }
+                        @if (!uploaded.Any())
+                        {
+                            <div class="smallmuted">No uploads yet.</div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Feedback -->
+            <div id="tab-feedback" class="@IsPane("feedback") animate-in">
+                <div class="cardx grid two">
+                    <div>
+                        <h6>Send feedback</h6>
+                        <form id="fbForm" class="grid">
+                            <input id="fbSub" class="inputx" placeholder="Subject" />
+                            <textarea id="fbMsg" class="inputx" rows="6" placeholder="Your feedback…"></textarea>
+                            <button class="btnx brand" type="submit">Send</button>
+                        </form>
+                    </div>
+                    <div>
+                        <h6>Previous feedback</h6>
+                        <div id="fbList"></div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+</div>
+
+@section Scripts {
+    <!-- Chart.js for a quick analytics chart -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script>
+        // ---------- helpers ----------
+        const me = '@User.Identity?.Name'.toLowerCase() || 'me';
+        const k = (s) => `pgrsms_${me}_${s}`;
+        const $ = (q, root = document) => root.querySelector(q);
+        const $$ = (q, root = document) => Array.from(root.querySelectorAll(q));
+        const save = (n, v) => localStorage.setItem(k(n), JSON.stringify(v));
+        const load = (n, d) => { try { return JSON.parse(localStorage.getItem(k(n))) ?? d; } catch { return d; } };
+
+        // ---------- AI companion (demo) ----------
+        const aiLog = $('#aiLog');
+        const aiInput = $('#aiInput');
+        const aiSend = $('#aiSend');
+        const aiClear = $('#aiClear');
+        function aiAdd(who, text) {
+            const item = document.createElement('div');
+            item.className = 'cardx animate-in';
+            item.style.background = who === 'you' ? '#162032' : '#101828';
+            item.innerHTML = `<b>${who === 'you' ? 'You' : 'Assistant'}</b><div class="smallmuted">${text}</div>`;
+            aiLog.appendChild(item); aiLog.scrollTop = aiLog.scrollHeight;
+        }
+        aiSend?.addEventListener('click', () => {
+            const q = aiInput.value.trim(); if (!q) return;
+            aiAdd('you', q); aiInput.value = '';
+            setTimeout(() => aiAdd('ai', 'Here’s a quick thought: ' + q.replace(/\?*$/, '?').replace(/^\w/, c => c.toUpperCase())), 400);
+        });
+        aiClear?.addEventListener('click', () => aiLog.innerHTML = '');
+
+        // ---------- Messaging ----------
+        const chatLog = $('#chatLog');
+        function renderChat() {
+            chatLog.innerHTML = '';
+            (load('chat', [])).forEach(x => {
+                const d = document.createElement('div');
+                d.className = 'd-flex justify-content-' + (x.me ? 'end' : 'start');
+                d.innerHTML = `<div class="cardx my-1" style="max-width:70%; background:${x.me ? '#1a2233' : '#141a25'}"><div class="smallmuted">${x.text}</div></div>`;
+                chatLog.appendChild(d);
+            });
+            chatLog.scrollTop = chatLog.scrollHeight;
+        }
+        $('#chatSend')?.addEventListener('click', () => {
+            const t = $('#chatInput').value.trim(); if (!t) return;
+            const msgs = load('chat', []); msgs.push({ me: true, text: t, time: Date.now() }); save('chat', msgs); renderChat();
+            $('#chatInput').value = '';
+        });
+        $$('.tpl').forEach(b => b.addEventListener('click', () => { $('#chatInput').value = b.dataset.tpl; }));
+        renderChat();
+
+        // ---------- Service requests ----------
+        function renderSvc() {
+            const list = $('#svcList'); list.innerHTML = '';
+            load('svc', []).forEach(s => {
+                const div = document.createElement('div');
+                div.className = 'cardx my-1'; div.innerHTML = `<b>${s.sub}</b> <span class="badge-soft">${s.type}</span><div class="smallmuted">${s.desc}</div>`;
+                list.appendChild(div);
+            });
+        }
+        $('#svcForm')?.addEventListener('submit', e => {
+            e.preventDefault();
+            const item = { sub: $('#svcSub').value, type: $('#svcType').value, desc: $('#svcDesc').value, t: Date.now() };
+            const arr = load('svc', []); arr.push(item); save('svc', arr);
+            $('#svcForm').reset(); renderSvc();
+        });
+        renderSvc();
+
+        // ---------- Analytics chart ----------
+        const ctx = document.getElementById('chartStudy');
+        if (ctx) {
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                    datasets: [{ label: 'Hours', data: [2, 3, 1, 4, 2, 5, 2] }]
+                },
+                options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+            });
+        }
+
+        // ---------- CV generator ----------
+        $('#cvGenerate')?.addEventListener('click', () => {
+            const name = $('#cvName').value, email = $('#cvEmail').value, summary = $('#cvSummary').value;
+            const skills = ($('#cvSkills').value || '').split(',').map(s => s.trim()).filter(Boolean);
+            const exp = ($('#cvExperience').value || '').split('\n').map(s => s.trim()).filter(Boolean);
+            const html = `
+              <html><head><title>${name} - CV</title>
+              <style>body{font-family:Segoe UI,Arial;margin:40px;color:#222} h1{margin:0} .chip{display:inline-block;background:#eef;padding:4px 10px;border-radius:999px;margin:2px}</style>
+              </head><body>
+              <h1>${name}</h1><div>${email}</div><hr/>
+              <h3>Summary</h3><p>${summary}</p>
+              <h3>Skills</h3><p>${skills.map(s => `<span class="chip">${s}</span>`).join('')}</p>
+              <h3>Experience</h3><ul>${exp.map(e => `<li>${e}</li>`).join('')}</ul>
+              </body></html>`;
+            const w = window.open('about:blank'); w.document.write(html); w.document.close(); w.focus();
+            setTimeout(() => w.print(), 300);
+        });
+
+        // ---------- Tasks ----------
+        function renderTasks() {
+            const box = $('#taskList'); box.innerHTML = '';
+            load('tasks', []).forEach((t, i) => {
+                const done = t.done ? 'text-decoration:line-through; color:#7f8aa0' : '';
+                const div = document.createElement('div'); div.className = 'd-flex justify-content-between align-items-center cardx my-1';
+                div.innerHTML = `<div><b style="${done}">${t.title}</b> <span class="smallmuted">${t.due || ''}</span></div>
+                <div class="d-flex gap-2">
+                  <button class="btnx ghost" data-i="${i}" data-act="toggle">${t.done ? 'Undo' : 'Done'}</button>
+                  <button class="btnx ghost" data-i="${i}" data-act="del">Delete</button>
+                </div>`;
+                box.appendChild(div);
+            });
+        }
+        $('#taskForm')?.addEventListener('submit', e => {
+            e.preventDefault();
+            const arr = load('tasks', []); arr.push({ title: $('#taskTitle').value, due: $('#taskDue').value, done: false });
+            save('tasks', arr); e.target.reset(); renderTasks();
+        });
+        $('#taskList')?.addEventListener('click', e => {
+            const btn = e.target.closest('button'); if (!btn) return;
+            const arr = load('tasks', []);
+            const i = parseInt(btn.dataset.i); const act = btn.dataset.act;
+            if (act === 'del') arr.splice(i, 1);
+            if (act === 'toggle') arr[i].done = !arr[i].done;
+            save('tasks', arr); renderTasks();
+        });
+        renderTasks();
+
+        // ---------- Directory quick messages ----------
+        $$('.dirmsg').forEach(b => b.addEventListener('click', () => {
+            $('#dirCompose').value = `Hi ${b.dataset.name},\n\nI hope you're well. I wanted to reach out regarding ...\n\nThanks,\n${me}`;
+        }));
+        $('#dirSend')?.addEventListener('click', () => { alert('Message queued (demo).'); });
+        $('#dirClear')?.addEventListener('click', () => $('#dirCompose').value = '');
+
+        // ---------- Marks ----------
+        function renderMarks() {
+            const box = $('#marksList'); box.innerHTML = '';
+            const arr = load('marks', []);
+            arr.forEach((m, i) => {
+                const pct = Math.min(100, Math.round((m.earned / Math.max(1, m.total)) * 100));
+                const left = Math.max(0, m.total - m.earned);
+                const row = document.createElement('div');
+                row.className = 'cardx my-1';
+                row.innerHTML = `<b>${m.title}</b>
+                <div class="smallmuted">Earned: ${m.earned}/${m.total} · Remaining: ${left}</div>
+                <div class="progress mt-1"><div class="progress-bar" style="width:${pct}%"></div></div>
+                <div class="d-flex gap-2 mt-2">
+                  <button class="btnx ghost" data-i="${i}" data-act="rm">Remove</button>
+                </div>`;
+                box.appendChild(row);
+            });
+        }
+        $('#markForm')?.addEventListener('submit', e => {
+            e.preventDefault();
+            const arr = load('marks', []);
+            arr.push({ title: $('#mkTitle').value, earned: +$('#mkEarned').value, total: +$('#mkTotal').value });
+            save('marks', arr); e.target.reset(); renderMarks();
+        });
+        $('#marksList')?.addEventListener('click', e => {
+            const btn = e.target.closest('button'); if (!btn) return;
+            const arr = load('marks', []); arr.splice(parseInt(btn.dataset.i), 1); save('marks', arr); renderMarks();
+        });
+        renderMarks();
+
+        // ---------- Calendar ----------
+        const grid = $('#calendarGrid'), title = $('#calTitle');
+        let now = new Date();
+        function drawCal() {
+            grid.innerHTML = ''; const y = now.getFullYear(), m = now.getMonth();
+            const first = new Date(y, m, 1); const start = new Date(first); start.setDate(1 - (first.getDay() || 7) + 1);
+            title.textContent = now.toLocaleString(undefined, { month: 'long', year: 'numeric' });
+            for (let i = 0; i < 42; i++) {
+                const d = new Date(start); d.setDate(start.getDate() + i);
+                const inMonth = d.getMonth() === m;
+                const box = document.createElement('div'); box.className = 'cardx';
+                box.style.opacity = inMonth ? 1 : .4;
+                box.innerHTML = `<div><b>${d.getDate()}</b></div>`;
+                grid.appendChild(box);
+            }
+        }
+        $('#calPrev')?.addEventListener('click', () => { now.setMonth(now.getMonth() - 1); drawCal(); });
+        $('#calNext')?.addEventListener('click', () => { now.setMonth(now.getMonth() + 1); drawCal(); });
+        drawCal();
+
+        // ---------- Billing ----------
+        function renderBill() {
+            const list = $('#billList'); list.innerHTML = '';
+            const arr = load('bill', []);
+            let sub = 0;
+            arr.forEach((x, i) => {
+                sub += x.qty * x.price;
+                const div = document.createElement('div');
+                div.className = 'cardx my-1';
+                div.innerHTML = `<div class="d-flex justify-content-between">
+                <div><b>${x.desc}</b> <span class="smallmuted">x${x.qty}</span></div>
+                <div>$ ${(x.qty * x.price).toFixed(2)}</div></div>
+                <div class="d-flex gap-2 mt-2"><button class="btnx ghost" data-i="${i}" data-act="rm">Remove</button></div>`;
+                list.appendChild(div);
+            });
+            const tax = sub * 0.15, total = sub + tax;
+            $('#billTotals').innerHTML = `<div class="text-end">
+              <div class="smallmuted">Subtotal: $ ${sub.toFixed(2)}</div>
+              <div class="smallmuted">Tax (15%): $ ${tax.toFixed(2)}</div>
+              <div><b>Total: $ ${total.toFixed(2)}</b></div>
+            </div>`;
+        }
+        $('#billForm')?.addEventListener('submit', e => {
+            e.preventDefault();
+            const arr = load('bill', []);
+            arr.push({ desc: $('#bDesc').value, qty: +$('#bQty').value || 1, price: +$('#bPrice').value || 0 });
+            save('bill', arr); e.target.reset(); renderBill();
+        });
+        $('#billList')?.addEventListener('click', e => {
+            const btn = e.target.closest('button'); if (!btn) return;
+            const arr = load('bill', []); arr.splice(parseInt(btn.dataset.i), 1); save('bill', arr); renderBill();
+        });
+        renderBill();
+
+        // ---------- Feedback ----------
+        function renderFb() {
+            const box = $('#fbList'); box.innerHTML = '';
+            load('fb', []).forEach(f => {
+                const d = document.createElement('div'); d.className = 'cardx my-1';
+                d.innerHTML = `<b>${f.sub}</b><div class="smallmuted">${f.msg}</div>`;
+                box.appendChild(d);
+            });
+        }
+        $('#fbForm')?.addEventListener('submit', e => {
+            e.preventDefault();
+            const arr = load('fb', []); arr.push({ sub: $('#fbSub').value, msg: $('#fbMsg').value }); save('fb', arr);
+            e.target.reset(); renderFb();
+        });
+        renderFb();
+    </script>
+}
+    
