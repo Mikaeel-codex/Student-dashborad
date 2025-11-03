@@ -1,22 +1,22 @@
-# Build
+# ---------- Build stage ----------
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-# Copy csproj/sln and restore
+# Copy solution if present and project file, then restore
 COPY *.sln ./
-COPY YourProject/*.csproj YourProject/
+COPY PGRSMS/*.csproj PGRSMS/
 RUN dotnet restore
 
 # Copy the rest and publish
 COPY . .
-RUN dotnet publish YourProject/YourProject.csproj -c Release -o /app
+RUN dotnet publish PGRSMS/PGRSMS.csproj -c Release -o /app
 
-# Runtime
+# ---------- Runtime stage ----------
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
 COPY --from=build /app ./
 
-# Render injects PORT. Listen on 0.0.0.0:$PORT
 ENV ASPNETCORE_URLS=http://0.0.0.0:${PORT}
 ENV ASPNETCORE_ENVIRONMENT=Production
-CMD ["dotnet","YourProject.dll"]
+
+CMD ["dotnet", "PGRSMS.dll"]
