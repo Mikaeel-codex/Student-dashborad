@@ -15,7 +15,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Pgrsms")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+6222461f789ec50aae9474f59a0449c0ec02580b")]
 [assembly: System.Reflection.AssemblyProductAttribute("Pgrsms")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Pgrsms")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
